@@ -12,3 +12,17 @@ class TestJob
 end
 
 Crono.perform(TestJob).every 2.days, at: '15:30'
+
+
+class TestJob2
+  def perform
+    puts 'Test!'
+  end
+
+  def self.every
+    [2.days, at: '12:11']
+  end
+end
+
+Crono.perform(TestJob2)
+

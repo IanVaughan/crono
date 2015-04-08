@@ -13,6 +13,8 @@ module Crono
   end
 
   def self.perform(performer)
-    PerformerProxy.new(performer, Crono.scheduler)
+    pp = PerformerProxy.new(performer, Crono.scheduler)
+    pp.every(*performer.every) if performer.respond_to?(:every)
+    pp
   end
 end
