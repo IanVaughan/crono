@@ -7,10 +7,21 @@ module Crono
     include Logging
 
     attr_accessor :performer, :period, :last_performed_at, :job_log,
-                  :job_logger, :healthy
+                  :job_logger, :healthy, :period_set
 
-    def initialize(performer, period)
-      self.performer, self.period = performer, period
+    def initialize(performer, period = nil)
+      self.performer = performer
+      self.period_set = true
+      model.update(performer: performer)
+      self.period = if period
+                      model.update(period: period)
+                      period
+                    elsif period_in_db?
+                      period_from_db
+                    else
+                      self.period_set = false
+                      Period.new(1.second)
+                    end
       self.job_log = StringIO.new
       self.job_logger = Logger.new(job_log)
       @semaphore = Mutex.new
@@ -26,6 +37,9 @@ module Crono
     end
 
     def job_id
+      # IRV maybe use performer and period, or a random uiid
+      # need to persist this between cronic restarts so needs
+      # to be const
       description
     end
 
@@ -56,14 +70,20 @@ module Crono
     def update_model
       saved_log = model.reload.log || ''
       log_to_save = saved_log + job_log.string
-      model.update(last_performed_at: last_performed_at, log: log_to_save,
+      model.update(last_performed_at: last_performed_at,
+                   log: log_to_save,
                    healthy: healthy)
     end
 
     def perform_job
       performer_instance = performer.new
-      performer_instance.instance_variable_set(:@_crono_job, self)
-      performer_instance.perform
+      # performer_instance.instance_variable_set(:@_crono_job, self)
+      if period_set
+        performer_instance.perform
+      elsif period_in_db?
+        self.period = period_from_db
+        self.period_set = true
+      end
       finished_time_sec = format('%.2f', Time.now - last_performed_at)
     rescue StandardError => e
       handle_job_fail(e, finished_time_sec)
@@ -98,6 +118,14 @@ module Crono
 
     def model
       @model ||= Crono::CronoJob.find_or_create_by(job_id: job_id)
+    end
+
+    def period_in_db?
+      model.period && model.at
+    end
+
+    def period_from_db
+      Period.new(model.period, model.at)
     end
   end
 end

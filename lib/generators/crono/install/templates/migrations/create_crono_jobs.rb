@@ -4,6 +4,9 @@ class CreateCronoJobs < ActiveRecord::Migration
       t.string    :job_id, null: false
       t.text      :log
       t.datetime  :last_performed_at
+      t.string    :performer
+      t.string    :period
+      t.string    :at
       t.boolean   :healthy
       t.timestamps null: false
     end

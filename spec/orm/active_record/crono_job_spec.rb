@@ -14,6 +14,7 @@ describe Crono::CronoJob do
   end
 
   it 'should validate uniqueness of job_id' do
+    # IRV: could create hash of job class name and period
     Crono::CronoJob.create!(job_id: 'TestJob every 2 days')
     @crono_job = Crono::CronoJob.create(job_id: 'TestJob every 2 days')
     expect(@crono_job).not_to be_valid
